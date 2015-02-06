@@ -34,8 +34,10 @@ THREE.ObjectLoader.prototype = {
 
 	parse: function ( json ) {
 
+		var imagePlaceholders = this.parseImagePlaceholders( json.images );
+		var textures = this.parseTextures( json.textures, imagePlaceholders );
 		var geometries = this.parseGeometries( json.geometries );
-		var materials = this.parseMaterials( json.materials );
+		var materials = this.parseMaterials( json.materials, textures );
 		var object = this.parseObject( json.object, geometries, materials );
 
 		return object;
@@ -182,7 +184,7 @@ THREE.ObjectLoader.prototype = {
 
 	},
 
-	parseMaterials: function ( json ) {
+	parseMaterials: function ( json, textures ) {
 
 		var materials = {};
 
@@ -199,6 +201,18 @@ THREE.ObjectLoader.prototype = {
 
 				if ( data.name !== undefined ) material.name = data.name;
 
+				if (data.map !== undefined) {
+					var texture = textures [ data.map ];
+
+					if ( texture === undefined ) {
+
+						console.warn( 'THREE.ObjectLoader: Undefined texture', data.map );
+
+					}
+
+					material.map = texture;
+				}
+
 				materials[ data.uuid ] = material;
 
 			}
@@ -208,6 +222,62 @@ THREE.ObjectLoader.prototype = {
 		return materials;
 
 	},
+
+	parseImagePlaceholders: function ( json, onLoad ) {
+		var imagePlaceholders = {};
+
+		if (json !== undefined) {
+			for (var i = 0, l = json.length; i < l; i++) {
+				var data = json [ i ];
+				imagePlaceholders[data.uuid] = data;
+			}
+		}
+
+		return imagePlaceholders;
+	},
+
+	parseTextures: function ( json, imagePlaceholders ) {
+		var textures = {};
+
+		if (json !== undefined) {
+
+			var loader = new THREE.TextureLoader();
+			var iLoader = new THREE.ImageLoader();
+
+			for ( var i = 0, l = json.length; i < l; i++) {
+				var data = json [ i ];
+				var texture = loader.parse( data );
+
+
+				if (data.name !== undefined) texture.name = data.name;
+				if (data.uuid !== undefined) texture.uuid = data.uuid;
+				if (data.image !== undefined) {
+					imagePlaceholder = imagePlaceholders[data.image];
+
+					if ( imagePlaceholder === undefined ) {
+						console.warn( 'THREE.ObjectLoader: Undefined image', data.image );
+					}
+
+					iLoader.load(imagePlaceholder.url, (function(scopeTexture, scopeData) {
+						return function(image) {
+							image.uuid = scopeData.uuid;
+							scopeTexture.image = image;
+							scopeTexture.needsUpdate = true;
+						}
+					})(texture, data), undefined, (function(scopeUrl) {
+						return function() {
+							console.warn( 'THREE.ObjectLoader: Failed to load image', scopeUrl);
+						}
+					})(imagePlaceholder.url));
+				}
+
+				textures [data.uuid] = texture;
+			}
+		}
+
+		return textures;
+	},
+
 
 	parseObject: function () {
 

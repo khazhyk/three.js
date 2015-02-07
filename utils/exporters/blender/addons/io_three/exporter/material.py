@@ -38,6 +38,8 @@ class Material(base_classes.BaseNode):
         vertex_color = api.material.use_vertex_colors(self.node)
         self[constants.VERTEX_COLORS] = vertex_color
 
+        self[constants.TRANSPARENT] = api.material.transparent(self.node)
+
         self[constants.BLENDING] = api.material.blending(self.node)
 
         self[constants.DEPTH_TEST] = api.material.depth_test(self.node)

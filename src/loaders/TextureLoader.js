@@ -34,7 +34,7 @@ THREE.TextureLoader.prototype = {
 	},
 
 	parse: function ( json ) {
-		var texture = new THREE[ json.type ]();
+		var texture = new THREE[ "Texture" ]();
 
 
 		if (json.anisotropy !== undefined) texture.anisotropy = json.anisotropy;
